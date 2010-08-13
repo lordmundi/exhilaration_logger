@@ -213,8 +213,6 @@ void dump_all_data()
   }
 }
 
-//static void reset_header_byte () {
-//}
 
 void setup () {
     Serial.begin(115200);
