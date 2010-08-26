@@ -65,6 +65,20 @@ static byte bcd2bin (byte val) {
     return val - 6 * (val >> 4);
 }
 
+static void setDate (byte yy, byte mm, byte dd, byte h, byte m, byte s) {
+    rtc.send();
+    rtc.write(0);
+    rtc.write(bin2bcd(s));
+    rtc.write(bin2bcd(m));
+    rtc.write(bin2bcd(h));
+    rtc.write(bin2bcd(0));
+    rtc.write(bin2bcd(dd));
+    rtc.write(bin2bcd(mm));
+    rtc.write(bin2bcd(yy));
+    rtc.write(0);
+    rtc.stop();
+}
+
 static void getDate (byte* buf) {
     rtc.send();
     rtc.write(0);
@@ -292,6 +306,101 @@ void loop () {
                         stream.flush();
                         mode = MODE_WAITING_FOR_RESET;
                         Serial.println("done.");
+                        break;
+
+                    case 'S':
+                        mode = MODE_WAITING_FOR_RESET;
+                        char input_field_buff[3];
+
+                        // Check to see that there is enough input
+                        byte bytes_waiting = Serial.available();
+                        if (bytes_waiting < 13) {
+                            Serial.println("Error:  Format is \"S YYMMDDhhmmss\"");
+                            Serial.print("Only saw ");
+                            Serial.print(bytes_waiting);
+                            Serial.println("characters following the char S");
+                        } else {
+                            // Make sure our string always ends in a null char
+                            input_field_buff[2] = 0;
+
+                            // Space
+                            Serial.read();
+
+                            // Year
+                            input_field_buff[0] = Serial.read();
+                            input_field_buff[1] = Serial.read();
+                            byte year = atoi(input_field_buff);
+
+                            // Month
+                            input_field_buff[0] = Serial.read();
+                            input_field_buff[1] = Serial.read();
+                            byte month = atoi(input_field_buff);
+
+                            // Day
+                            input_field_buff[0] = Serial.read();
+                            input_field_buff[1] = Serial.read();
+                            byte day = atoi(input_field_buff);
+
+                            // Hour
+                            input_field_buff[0] = Serial.read();
+                            input_field_buff[1] = Serial.read();
+                            byte hour = atoi(input_field_buff);
+
+                            // Minute
+                            input_field_buff[0] = Serial.read();
+                            input_field_buff[1] = Serial.read();
+                            byte minute = atoi(input_field_buff);
+
+                            // Second
+                            input_field_buff[0] = Serial.read();
+                            input_field_buff[1] = Serial.read();
+                            byte second = atoi(input_field_buff);
+
+                            // Range checking
+                            if ((year > 99) || (year < 0)) {
+                                Serial.println("Error: year out of range");
+                                break;
+                            }
+                            if ((month > 12) || (month < 0) {
+                                Serial.println("Error: month out of range");
+                                break;
+                            }
+                            if ((day > 31) || (day < 0)) {
+                                Serial.println("Error: day out of range");
+                                break;
+                            }
+                            if ((hour > 23) || (hour < 0)) {
+                                Serial.println("Error: hour out of range");
+                                break;
+                            }
+                            if ((minute > 59) || (minute < 0)) {
+                                Serial.println("Error: minute out of range");
+                                break;
+                            }
+                            if ((second > 59) || (second < 0)) {
+                                Serial.println("Error: second out of range");
+                                break;
+                            }
+
+                            // Set the date
+                            byte now[6];
+                            getDate(now);
+                            Serial.print("Date before changing:");
+                            for (byte i = 0; i < 6; ++i) {
+                                Serial.print(' ');
+                                Serial.print((int) now[i]);
+                            }
+                            
+                            setDate(year, month, day, hour, minute, second);
+                            getDate(now);
+                            Serial.print("Date after set command: ");
+                            for (byte i = 0; i < 6; ++i) {
+                                Serial.print(' ');
+                                Serial.print((int) now[i]);
+                            }
+                            Serial.println("Done.");
+                        }
+                            
                         break;
                     
                     default:
