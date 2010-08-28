@@ -243,11 +243,20 @@ void setup () {
     // may omit following call if calculate() won't be called later on
     psensor.getCalibData();
     
+    byte now[6];
+    getDate(now);
+    Serial.print("Current Date:");
+    for (byte i = 0; i < 6; ++i) {
+       Serial.print(' ');
+       Serial.print((int) now[i]);
+    }
+    Serial.println(' ');
+    
     // set up timer to wait for an input command
     timer.set(SERIAL_CMD_TIMEOUT);
     Serial.print("waiting for command for ");
     Serial.print(SERIAL_CMD_TIMEOUT);
-    Serial.println(" seconds ['D' = Dump Memory, 'G' = Get Valid Data, 'R' = Reset memory]");
+    Serial.println(" seconds ['D' = Dump Memory, 'G' = Get Valid Data, 'R' = Reset memory, 'S' = Set time]");
 
     // turn on green led solid and red off
     green_led_state = 1;
@@ -258,7 +267,7 @@ void setup () {
 void loop () {
   uint32_t millis_start, loop_duration;
   float percentage_complete;
-   
+
   millis_start = millis();
   
   // logic depends on the current mode
@@ -311,14 +320,15 @@ void loop () {
                     case 'S':
                         mode = MODE_WAITING_FOR_RESET;
                         char input_field_buff[3];
-
+                        byte bytes_waiting;
+                        
                         // Check to see that there is enough input
-                        byte bytes_waiting = Serial.available();
+                        bytes_waiting = Serial.available();
                         if (bytes_waiting < 13) {
                             Serial.println("Error:  Format is \"S YYMMDDhhmmss\"");
                             Serial.print("Only saw ");
-                            Serial.print(bytes_waiting);
-                            Serial.println("characters following the char S");
+                            Serial.print(bytes_waiting, DEC);
+                            Serial.println(" characters following the char S");
                         } else {
                             // Make sure our string always ends in a null char
                             input_field_buff[2] = 0;
@@ -361,7 +371,7 @@ void loop () {
                                 Serial.println("Error: year out of range");
                                 break;
                             }
-                            if ((month > 12) || (month < 0) {
+                            if ((month > 12) || (month < 0)) {
                                 Serial.println("Error: month out of range");
                                 break;
                             }
@@ -391,6 +401,7 @@ void loop () {
                                 Serial.print((int) now[i]);
                             }
                             
+                            Serial.println(' ');
                             setDate(year, month, day, hour, minute, second);
                             getDate(now);
                             Serial.print("Date after set command: ");
@@ -398,15 +409,20 @@ void loop () {
                                 Serial.print(' ');
                                 Serial.print((int) now[i]);
                             }
+                            Serial.println(' ');
                             Serial.println("Done.");
                         }
                             
                         break;
-                    
+
                     default:
                         Serial.println("Invalid command.  Waiting indefinitely");
                         mode = MODE_WAITING_FOR_RESET;                        
                         break;
+                }
+                // Read extra trash characters to reset string before next attempt
+                while (Serial.available()) {
+                  Serial.read();
                 }
             }
         } else {
